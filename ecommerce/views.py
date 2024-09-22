@@ -1,4 +1,6 @@
 from django.conf import settings
+from django.http import HttpResponse
+from ecommerce.invoice import generate_invoice
 from ecommerce.models import Cart, Product, Profile,User
 from ecommerce.permission import IsSeller
 from ecommerce.serializer import CartSerializer, ProductSerializer, SellerRegistrationSerializer, SellerTokenObtainSerializer, UserSerializer, MyTokenObtainSerializer,RegisterSerializer,PasswordResetSerializer, SetNewPasswordSerializer
@@ -13,6 +15,7 @@ from django.utils.http import urlsafe_base64_decode
 from django.utils.encoding import force_str
 from rest_framework.views import APIView
 import razorpay
+from django.core.mail import EmailMessage
 
 
 class MyTokenObtainPairView(TokenObtainPairView):
@@ -123,20 +126,28 @@ class PurchaseView(generics.CreateAPIView):
         if not cart_items.exists():
             return Response({'message': 'Cart is empty.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        total_amount = sum(item.product.price * item.quantity for item in cart_items)
-        total_amount *= 100  
+        total_amount = sum(item.product.price * item.quantity for item in cart_items) * 100  # Convert to paise
 
-   
+        # Create Razorpay client and order (as before)
         client = razorpay.Client(auth=(settings.RAZORPAY_API_KEY, settings.RAZORPAY_API_SECRET))
-
-        
         order = client.order.create({
             'amount': total_amount,
             'currency': 'INR',
-            'payment_capture': 1,  
+            'payment_capture': 1,
         })
 
+        
+        pdf_content = generate_invoice(cart_items, total_amount, user.email)
+
     
+        email = EmailMessage(
+            'Your Invoice',
+            'Thank you for your purchase. Please find your invoice attached.',
+            settings.DEFAULT_FROM_EMAIL,
+            [user.email],
+        )
+        email.attach(pdf_content.name, pdf_content.read(), 'application/pdf')
+        email.send()
 
         return Response({'order_id': order['id'], 'amount': total_amount}, status=status.HTTP_201_CREATED)
 
@@ -158,3 +169,48 @@ class RazorpayPaymentVerificationView(generics.CreateAPIView):
             return Response({'message': 'Payment verified and cart cleared.'}, status=status.HTTP_200_OK)
         else:
             return Response({'message': 'Payment verification failed.'}, status=status.HTTP_400_BAD_REQUEST)
+        
+class TestInvoiceView(APIView):
+    permission_classes = [AllowAny]  # Optional: restrict access
+
+    def get(self, request):
+        # Mock cart items and total amount
+        cart_items = [
+            {"product": {"name": "Product 1", "price": 1000}, "quantity": 2},
+            {"product": {"name": "Product 2", "price": 2000}, "quantity": 1},
+        ]
+        total_amount = sum(item['product']['price'] * item['quantity'] for item in cart_items)
+        user_email = request.user.email
+
+        # Generate invoice
+        pdf_file = generate_invoice(cart_items, total_amount, user_email)
+
+        # Return the PDF as a response
+        response = HttpResponse(pdf_file, content_type='application/pdf')
+        response['Content-Disposition'] = 'attachment; filename="invoice.pdf"'
+        return response
+
+class TestInvoiceView(APIView): #Test pdf generator
+    permission_classes = [AllowAny]  
+
+    def get(self, request):
+        
+        if request.user.is_authenticated:
+            user_email = request.user.email
+        else:
+            user_email = "guest@example.com"  
+
+        
+        cart_items = [
+            {"product": {"name": "Product 1", "price": 1000}, "quantity": 2},
+            {"product": {"name": "Product 2", "price": 2000}, "quantity": 1},
+        ]
+        total_amount = sum(item['product']['price'] * item['quantity'] for item in cart_items)
+
+        # Generate invoice
+        pdf_file = generate_invoice(cart_items, total_amount, user_email)
+
+        # Return the PDF as a response
+        response = HttpResponse(pdf_file, content_type='application/pdf')
+        response['Content-Disposition'] = 'attachment; filename="invoice.pdf"'
+        return response

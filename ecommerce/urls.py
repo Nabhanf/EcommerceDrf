@@ -19,7 +19,8 @@ urlpatterns = [
     path('cart/update/<int:pk>/',views.UpdateCartView.as_view()),
     path('cart/remove/<int:pk>/',views.RemoveFromCartView.as_view()),
     path('razorpay/payment/', views.PurchaseView.as_view(), name='razorpay_payment'),
-    path('razorpay/payment/verify/', views.RazorpayPaymentVerificationView.as_view())
+    path('razorpay/payment/verify/', views.RazorpayPaymentVerificationView.as_view()),
+    path('test-invoice/', views.TestInvoiceView.as_view(), name='test-invoice'),
     
 
 
