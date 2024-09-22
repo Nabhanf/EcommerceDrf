@@ -207,10 +207,10 @@ class TestInvoiceView(APIView): #Test pdf generator
         ]
         total_amount = sum(item['product']['price'] * item['quantity'] for item in cart_items)
 
-        # Generate invoice
+        
         pdf_file = generate_invoice(cart_items, total_amount, user_email)
 
-        # Return the PDF as a response
+        
         response = HttpResponse(pdf_file, content_type='application/pdf')
         response['Content-Disposition'] = 'attachment; filename="invoice.pdf"'
         return response
