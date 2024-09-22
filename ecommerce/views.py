@@ -128,7 +128,7 @@ class PurchaseView(generics.CreateAPIView):
 
         total_amount = sum(item.product.price * item.quantity for item in cart_items) * 100  
 
-        # Create Razorpay client and order (as before)
+    
         client = razorpay.Client(auth=(settings.RAZORPAY_API_KEY, settings.RAZORPAY_API_SECRET))
         order = client.order.create({
             'amount': total_amount,
