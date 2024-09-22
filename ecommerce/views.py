@@ -126,7 +126,7 @@ class PurchaseView(generics.CreateAPIView):
         if not cart_items.exists():
             return Response({'message': 'Cart is empty.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        total_amount = sum(item.product.price * item.quantity for item in cart_items) * 100  # Convert to paise
+        total_amount = sum(item.product.price * item.quantity for item in cart_items) * 100  
 
         # Create Razorpay client and order (as before)
         client = razorpay.Client(auth=(settings.RAZORPAY_API_KEY, settings.RAZORPAY_API_SECRET))
@@ -158,7 +158,7 @@ class RazorpayPaymentVerificationView(generics.CreateAPIView):
         order_id = data.get('razorpay_order_id')
         signature = data.get('razorpay_signature')
 
-        # Create a Razorpay client
+        
         client = razorpay.Client(auth=(settings.RAZORPAY_API_KEY, settings.RAZORPAY_API_SECRET))
         expected_signature = client.utility.generate_signature(order_id, payment_id)
 
@@ -170,25 +170,7 @@ class RazorpayPaymentVerificationView(generics.CreateAPIView):
         else:
             return Response({'message': 'Payment verification failed.'}, status=status.HTTP_400_BAD_REQUEST)
         
-class TestInvoiceView(APIView):
-    permission_classes = [AllowAny]  # Optional: restrict access
 
-    def get(self, request):
-        # Mock cart items and total amount
-        cart_items = [
-            {"product": {"name": "Product 1", "price": 1000}, "quantity": 2},
-            {"product": {"name": "Product 2", "price": 2000}, "quantity": 1},
-        ]
-        total_amount = sum(item['product']['price'] * item['quantity'] for item in cart_items)
-        user_email = request.user.email
-
-        # Generate invoice
-        pdf_file = generate_invoice(cart_items, total_amount, user_email)
-
-        # Return the PDF as a response
-        response = HttpResponse(pdf_file, content_type='application/pdf')
-        response['Content-Disposition'] = 'attachment; filename="invoice.pdf"'
-        return response
 
 class TestInvoiceView(APIView): #Test pdf generator
     permission_classes = [AllowAny]  
